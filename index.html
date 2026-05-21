@@ -485,7 +485,7 @@ document.getElementById('search').addEventListener('input', applyFilters);
 // ============================================================
 //  CARGAR GEOJSON
 // ============================================================
-fetch('parcelas.geojson')
+fetch('parcelas.prueba.geojson')
   .then(r => r.json())
   .then(data => {
     allFeatures = data.features || [];
