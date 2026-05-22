@@ -43,6 +43,21 @@
       z-index: 1000; overflow: hidden;
     }
 
+    /* BOTTOM SHEET HANDLE — solo mobile */
+    #sheet-handle {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 10px 0 4px;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+    #sheet-handle-bar {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
     #sidebar-header {
       padding: 20px 20px 16px;
       border-bottom: 1px solid var(--border);
@@ -170,9 +185,44 @@
     #basemap-btn:hover { border-color: var(--accent); }
 
     @media (max-width: 640px) {
-      #sidebar { width: 100%; min-width: unset; height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
-      #app { flex-direction: column; }
-      #map { flex: 1; }
+      #app { flex-direction: column; position: relative; }
+      #map { position: absolute; inset: 0; z-index: 1; }
+
+      /* Bottom sheet */
+      #sidebar {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        width: 100%; min-width: unset;
+        height: 52px;               /* altura colapsada — solo handle + título */
+        max-height: 85vh;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        border-radius: 16px 16px 0 0;
+        z-index: 1000;
+        overflow: hidden;
+        transition: height 0.35s cubic-bezier(.4,0,.2,1);
+        box-shadow: 0 -4px 24px rgba(0,0,0,.4);
+      }
+      #sidebar.expanded {
+        height: 82vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      #sheet-handle { display: flex; }
+
+      /* Ocultar header normal en mobile, el handle hace de header */
+      #sidebar-header { padding: 4px 16px 10px; }
+      #sidebar-header h1 { font-size: 14px; }
+
+      /* Asegurar scroll interno en lista */
+      #parcel-list {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 50vh;
+      }
+
+      /* Botón basemap arriba en mobile */
+      #basemap-btn { bottom: auto; top: 12px; right: 12px; }
     }
   </style>
 </head>
@@ -181,6 +231,10 @@
 
   <!-- SIDEBAR -->
   <div id="sidebar">
+    <!-- Handle para deslizar en móvil -->
+    <div id="sheet-handle" onclick="toggleSheet()">
+      <div id="sheet-handle-bar"></div>
+    </div>
     <div id="sidebar-header">
       <h1>📍 Catastro de Parcelas</h1>
       <p id="subtitle">Cargando datos...</p>
@@ -504,6 +558,20 @@ fetch('parcelas.prueba.geojson')
     document.getElementById('subtitle').textContent = "Error cargando datos";
     console.error("Error cargando parcelas.geojson:", err);
   });
+
+// ============================================================
+//  BOTTOM SHEET MÓVIL
+// ============================================================
+function toggleSheet() {
+  document.getElementById('sidebar').classList.toggle('expanded');
+}
+function isMobile() { return window.innerWidth <= 640; }
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('search').addEventListener('focus', () => {
+    if (isMobile()) document.getElementById('sidebar').classList.add('expanded');
+  });
+});
+
 </script>
 </body>
 </html>
