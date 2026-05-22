@@ -23,11 +23,10 @@
       --text2:    #8b90a8;
       --radius:   10px;
 
-      --c-plana:     #1a9641;
-      --c-suave:     #a6d96a;
-      --c-moderada:  #f5c842;
-      --c-fuerte:    #fd8d3c;
-      --c-muyfuerte: #d7191c;
+      --c-zona-a: #1a9641;
+      --c-zona-b: #a6d96a;
+      --c-zona-c: #f5c842;
+      --c-zona-d: #d7191c;
     }
 
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
@@ -41,21 +40,6 @@
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       z-index: 1000; overflow: hidden;
-    }
-
-    /* BOTTOM SHEET HANDLE — solo mobile */
-    #sheet-handle {
-      display: none;
-      justify-content: center;
-      align-items: center;
-      padding: 10px 0 4px;
-      cursor: grab;
-      flex-shrink: 0;
-    }
-    #sheet-handle-bar {
-      width: 40px; height: 4px;
-      background: var(--border);
-      border-radius: 2px;
     }
 
     #sidebar-header {
@@ -185,44 +169,47 @@
     #basemap-btn:hover { border-color: var(--accent); }
 
     @media (max-width: 640px) {
-      #app { flex-direction: column; position: relative; }
-      #map { position: absolute; inset: 0; z-index: 1; }
+      /* Reset overflow para móvil */
+      html, body { overflow: hidden; position: fixed; width: 100%; height: 100%; }
 
-      /* Bottom sheet */
+      #app { flex-direction: column; height: 100%; }
+
+      /* Mapa ocupa parte superior */
+      #map { height: 48vh; flex: none; }
+
+      /* Panel inferior con scroll táctil */
       #sidebar {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        width: 100%; min-width: unset;
-        height: 52px;               /* altura colapsada — solo handle + título */
-        max-height: 85vh;
+        width: 100%;
+        min-width: unset;
+        height: 52vh;
+        flex: none;
         border-right: none;
-        border-top: 1px solid var(--border);
+        border-top: 2px solid var(--accent);
         border-radius: 16px 16px 0 0;
-        z-index: 1000;
-        overflow: hidden;
-        transition: height 0.35s cubic-bezier(.4,0,.2,1);
-        box-shadow: 0 -4px 24px rgba(0,0,0,.4);
+        overflow-y: scroll !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
       }
-      #sidebar.expanded {
-        height: 82vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-      #sheet-handle { display: flex; }
 
-      /* Ocultar header normal en mobile, el handle hace de header */
-      #sidebar-header { padding: 4px 16px 10px; }
+      /* Header compacto */
+      #sidebar-header { padding: 12px 16px 8px; }
       #sidebar-header h1 { font-size: 14px; }
 
-      /* Asegurar scroll interno en lista */
+      /* Stats compacto */
+      #stats { padding: 8px 12px; gap: 6px; }
+      .stat-val { font-size: 16px; }
+
+      /* Lista con altura libre — el scroll del sidebar lo maneja */
       #parcel-list {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        max-height: 50vh;
+        overflow-y: visible !important;
+        flex: none;
+        height: auto;
+        padding-bottom: 40px;
       }
 
-      /* Botón basemap arriba en mobile */
-      #basemap-btn { bottom: auto; top: 12px; right: 12px; }
+      /* Botón mapa base arriba */
+      #basemap-btn { bottom: auto; top: 10px; right: 10px; font-size: 11px; padding: 6px 10px; }
     }
   </style>
 </head>
@@ -231,10 +218,6 @@
 
   <!-- SIDEBAR -->
   <div id="sidebar">
-    <!-- Handle para deslizar en móvil -->
-    <div id="sheet-handle" onclick="toggleSheet()">
-      <div id="sheet-handle-bar"></div>
-    </div>
     <div id="sidebar-header">
       <h1>📍 Catastro de Parcelas</h1>
       <p id="subtitle">Cargando datos...</p>
@@ -257,7 +240,7 @@
     </div>
 
     <div id="legend">
-      <div class="legend-title">Clasificación de pendiente</div>
+      <div class="legend-title">Zonificación por pendiente</div>
       <div id="legend-items"></div>
     </div>
 
@@ -279,12 +262,12 @@
 // ============================================================
 //  CONFIGURACIÓN DE PENDIENTE
 // ============================================================
+// ── Clasificación de zonas por pendiente ─────────────────────
 const CLASES = [
-  { key: "Plana",      label: "Plana (0–5%)",       color: "#1a9641", border: "#0f5c26" },
-  { key: "Suave",      label: "Suave (5–15%)",       color: "#a6d96a", border: "#6aaa1e" },
-  { key: "Moderada",   label: "Moderada (15–30%)",   color: "#f5c842", border: "#c49a00" },
-  { key: "Fuerte",     label: "Fuerte (30–45%)",     color: "#fd8d3c", border: "#c45a00" },
-  { key: "Muy fuerte", label: "Muy fuerte (>45%)",   color: "#d7191c", border: "#8b0000" },
+  { key: "A", label: "Zona A — Sin restricción (≤5%)",    color: "#1a9641", border: "#0f5c26", min:  0, max:  5  },
+  { key: "B", label: "Zona B — Baja restricción (5–12%)", color: "#a6d96a", border: "#6aaa1e", min:  5, max: 12  },
+  { key: "C", label: "Zona C — Residencial (12–20%)",     color: "#f5c842", border: "#c49a00", min: 12, max: 20  },
+  { key: "D", label: "Zona D — Protección (≥20%)",        color: "#d7191c", border: "#8b0000", min: 20, max: 999 },
 ];
 
 // ── Nombres de campos de tu GeoJSON ──────────────────────────
@@ -330,14 +313,9 @@ let activeFilters = new Set(CLASES.map(c => c.key));
 //  COLOR POR CLASE
 // ============================================================
 function getClase(props) {
-  // Clasifica automáticamente por valor numérico de PEND_mean
   const val = parseFloat(props[CAMPO_PEND_MEAN]);
   if (isNaN(val)) return null;
-  if (val <  5)  return CLASES[0]; // Plana
-  if (val < 15)  return CLASES[1]; // Suave
-  if (val < 30)  return CLASES[2]; // Moderada
-  if (val < 45)  return CLASES[3]; // Fuerte
-  return CLASES[4];                // Muy fuerte
+  return CLASES.find(c => val >= c.min && val < c.max) || CLASES[CLASES.length - 1];
 }
 function styleFeature(feat) {
   const cl = getClase(feat.properties);
@@ -376,16 +354,16 @@ function makePopup(p) {
         <span class="popup-val">${isNaN(p[CAMPO_AREA]) ? "—" : Number(p[CAMPO_AREA]).toLocaleString("es",{maximumFractionDigits:1})} m²</span>
       </div>
       <div class="popup-row">
+        <span class="popup-label">Zona</span>
+        <span class="popup-val" style="color:${claseColor}; font-weight:700;">${cl ? cl.key : "—"} &nbsp;·&nbsp; ${claseLabel.split("—")[1]?.trim()||claseLabel}</span>
+      </div>
+      <div class="popup-row">
         <span class="popup-label">Pendiente media</span>
         <span class="popup-val" style="color:${claseColor};">${isNaN(pendMean) ? "—" : pendMean.toFixed(1) + "%"}</span>
       </div>
       <div class="popup-row">
         <span class="popup-label">Pendiente min / max</span>
         <span class="popup-val">${isNaN(pendMin) ? "—" : pendMin.toFixed(1)}% / ${isNaN(pendMax) ? "—" : pendMax.toFixed(1)}%</span>
-      </div>
-      <div class="popup-row">
-        <span class="popup-label">Clasificación</span>
-        <span class="popup-val" style="color:${claseColor};">${claseLabel}</span>
       </div>
       <div class="popup-row" style="border-bottom:none;">
         <span class="popup-label" style="font-size:10px;line-height:1.4;">${p[CAMPO_DIR]||""}</span>
@@ -445,10 +423,10 @@ function renderCards(features) {
     div.innerHTML = `
       <div class="pc-top">
         <span class="pc-id">Parc. ${p[CAMPO_TEXT]||"—"}</span>
-        <span class="pc-badge" style="${badgeStyle(p)}">${cl2 ? cl2.label.split(" ")[0] : "—"}</span>
+        <span class="pc-badge" style="${badgeStyle(p)}">Zona ${cl2 ? cl2.key : "—"}</span>
       </div>
       <div class="pc-owner">${propShort}</div>
-      <div class="pc-area">${Number(p[CAMPO_AREA]||0).toLocaleString("es",{maximumFractionDigits:1})} m² · Pend. ${parseFloat(p[CAMPO_PEND_MEAN]).toFixed(1)}%</div>
+      <div class="pc-area">${Number(p[CAMPO_AREA]||0).toLocaleString("es",{maximumFractionDigits:1})} m² · ${parseFloat(p[CAMPO_PEND_MEAN]).toFixed(1)}% pend.</div>
     `;
     div.addEventListener('click', () => {
       selectedId = p[CAMPO_ID];
@@ -558,20 +536,6 @@ fetch('parcelas.prueba.geojson')
     document.getElementById('subtitle').textContent = "Error cargando datos";
     console.error("Error cargando parcelas.geojson:", err);
   });
-
-// ============================================================
-//  BOTTOM SHEET MÓVIL
-// ============================================================
-function toggleSheet() {
-  document.getElementById('sidebar').classList.toggle('expanded');
-}
-function isMobile() { return window.innerWidth <= 640; }
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('search').addEventListener('focus', () => {
-    if (isMobile()) document.getElementById('sidebar').classList.add('expanded');
-  });
-});
-
 </script>
 </body>
 </html>
