@@ -3,153 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mapa de Parcelas</title>
-
-  <!-- Leaflet CSS -->
+  <title>Catastro de Parcelas</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:       #0f1117;
-      --surface:  #1a1d27;
-      --surface2: #22263a;
-      --border:   #2e3250;
-      --accent:   #4f8ef7;
-      --text:     #e8eaf0;
-      --text2:    #8b90a8;
-      --radius:   10px;
-
-      --c-zona-a: #1a9641;
-      --c-zona-b: #a6d96a;
-      --c-zona-c: #f5c842;
-      --c-zona-d: #d7191c;
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+      --border: #2e3250; --accent: #4f8ef7; --text: #e8eaf0; --text2: #8b90a8;
+      --radius: 10px;
     }
-
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
-
-    /* LAYOUT */
     #app { display: flex; height: 100vh; width: 100vw; }
 
-    /* SIDEBAR */
+    /* ── SIDEBAR ── */
     #sidebar {
-      width: 320px; min-width: 320px; background: var(--surface);
+      width: 330px; min-width: 330px; background: var(--surface);
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       z-index: 1000; overflow: hidden;
     }
+    #sidebar-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    #sidebar-header h1 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    #sidebar-header p { font-size: 11px; color: var(--text2); }
 
-    #sidebar-header {
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-    #sidebar-header h1 {
-      font-size: 16px; font-weight: 600; letter-spacing: .01em;
-      color: var(--text); margin-bottom: 3px;
-    }
-    #sidebar-header p {
-      font-size: 12px; color: var(--text2);
-    }
-
-    /* STATS */
-    #stats {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .stat-box {
-      background: var(--surface2); border-radius: var(--radius);
-      padding: 10px 12px; border: 1px solid var(--border);
-    }
-    .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
-    .stat-val { font-size: 20px; font-weight: 600; color: var(--accent); font-family: 'DM Mono', monospace; }
-    .stat-unit { font-size: 10px; color: var(--text2); font-family: 'DM Mono', monospace; }
-
-    /* LEYENDA */
-    #legend {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .legend-title {
-      font-size: 11px; color: var(--text2); text-transform: uppercase;
-      letter-spacing: .06em; margin-bottom: 8px;
-    }
-    .legend-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 5px 8px; border-radius: 6px; cursor: pointer;
-      transition: background .15s;
-    }
-    .legend-item:hover { background: var(--surface2); }
-    .legend-item.inactive { opacity: .35; }
-    .legend-dot {
-      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
-      border: 1.5px solid rgba(255,255,255,.15);
-    }
-    .legend-text { font-size: 12px; color: var(--text); }
-    .legend-count {
-      margin-left: auto; font-size: 11px; color: var(--text2);
-      font-family: 'DM Mono', monospace;
-    }
-
-    /* LISTA PARCELAS */
-    #parcel-list {
-      flex: 1; overflow-y: auto; padding: 8px;
-    }
-    #parcel-list::-webkit-scrollbar { width: 4px; }
-    #parcel-list::-webkit-scrollbar-track { background: transparent; }
-    #parcel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .list-title {
-      font-size: 11px; color: var(--text2); text-transform: uppercase;
-      letter-spacing: .06em; padding: 6px 8px 4px;
-    }
-
-    .parcel-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px; margin-bottom: 6px;
-      cursor: pointer; transition: border-color .15s, background .15s;
-    }
-    .parcel-card:hover { border-color: var(--accent); background: #1e2236; }
-    .parcel-card.selected { border-color: var(--accent); background: #1e2236; }
-    .pc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-    .pc-id { font-size: 12px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--accent); }
-    .pc-badge {
-      font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500;
-      border: 1px solid transparent;
-    }
-    .pc-owner { font-size: 12px; color: var(--text); margin-bottom: 2px; }
-    .pc-area { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
-
-    /* MAPA */
-    #map { flex: 1; }
-
-    /* POPUP */
-    .leaflet-popup-content-wrapper {
-      background: var(--surface) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
-      color: var(--text) !important;
-      padding: 0 !important;
-    }
-    .leaflet-popup-tip { background: var(--surface) !important; }
-    .leaflet-popup-close-button { color: var(--text2) !important; top: 8px !important; right: 10px !important; font-size: 16px !important; }
-    .leaflet-popup-content { margin: 0 !important; width: auto !important; }
-
-    .popup-inner { padding: 16px 18px; min-width: 220px; }
-    .popup-id { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; margin-bottom: 4px; }
-    .popup-name { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
-    .popup-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
-    .popup-row:last-child { border-bottom: none; }
-    .popup-label { font-size: 11px; color: var(--text2); }
-    .popup-val { font-size: 12px; color: var(--text); font-weight: 500; font-family: 'DM Mono', monospace; }
-
-    /* SEARCH */
-    #search-wrap { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    /* ── SEARCH ── */
+    #search-wrap { padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     #search {
       width: 100%; background: var(--surface2); border: 1px solid var(--border);
       border-radius: 7px; padding: 7px 12px; font-size: 13px;
@@ -158,65 +37,119 @@
     #search:focus { border-color: var(--accent); }
     #search::placeholder { color: var(--text2); }
 
-    /* BASEMAP TOGGLE */
+    /* ── STATS ── */
+    #stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+      padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .stat-box { background: var(--surface2); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
+    .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+    .stat-val { font-size: 18px; font-weight: 600; color: var(--accent); font-family: 'DM Mono', monospace; }
+    .stat-unit { font-size: 10px; color: var(--text2); }
+
+    /* ── TABS ── */
+    #tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab-btn {
+      flex: 1; padding: 9px 4px; font-size: 11px; font-weight: 500;
+      color: var(--text2); background: none; border: none; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover { color: var(--text); }
+
+    /* ── PANELS ── */
+    #panels { flex-shrink: 0; }
+    .panel { display: none; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .panel.active { display: block; }
+    .legend-title { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .legend-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: background .15s;
+    }
+    .legend-item:hover { background: var(--surface2); }
+    .legend-item.inactive { opacity: .3; }
+    .legend-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,.15); }
+    .legend-text { font-size: 12px; color: var(--text); flex: 1; }
+    .legend-count { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+    /* ── PARCEL LIST ── */
+    #parcel-list { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
+    #parcel-list::-webkit-scrollbar { width: 4px; }
+    #parcel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .list-title { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px 6px; }
+    .parcel-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 9px 11px; margin-bottom: 5px;
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .parcel-card:hover, .parcel-card.selected { border-color: var(--accent); background: #1e2236; }
+    .pc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+    .pc-id { font-size: 12px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--accent); }
+    .pc-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+    .pc-owner { font-size: 12px; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pc-area { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+    /* ── MAP ── */
+    #map { flex: 1; }
+
+    /* ── POPUP ── */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface) !important; border: 1px solid var(--border) !important;
+      border-radius: var(--radius) !important; box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
+      color: var(--text) !important; padding: 0 !important;
+    }
+    .leaflet-popup-tip { background: var(--surface) !important; }
+    .leaflet-popup-close-button { color: var(--text2) !important; top: 8px !important; right: 10px !important; font-size: 16px !important; }
+    .leaflet-popup-content { margin: 0 !important; width: auto !important; }
+    .popup-inner { padding: 14px 16px; min-width: 240px; max-width: 300px; }
+    .popup-section-title {
+      font-size: 10px; color: var(--text2); text-transform: uppercase;
+      letter-spacing: .06em; margin: 10px 0 4px; padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .popup-section-title:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+    .popup-id { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; margin-bottom: 3px; }
+    .popup-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+    .popup-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+    .popup-row:last-child { border-bottom: none; }
+    .popup-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+    .popup-val { font-size: 11px; color: var(--text); font-weight: 500; font-family: 'DM Mono', monospace; text-align: right; }
+    .popup-status-badge {
+      display: inline-block; font-size: 10px; padding: 3px 8px;
+      border-radius: 5px; font-weight: 600; border: 1px solid; margin-top: 6px;
+    }
+
+    /* ── BASEMAP BTN ── */
     #basemap-btn {
-      position: absolute; bottom: 30px; right: 14px; z-index: 999;
+      position: absolute; bottom: 28px; right: 14px; z-index: 999;
       background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: 8px; padding: 8px 14px;
+      color: var(--text); border-radius: 8px; padding: 7px 12px;
       font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif;
       transition: border-color .15s;
     }
     #basemap-btn:hover { border-color: var(--accent); }
 
+    /* ── MOBILE ── */
     @media (max-width: 640px) {
-      /* Reset overflow para móvil */
       html, body { overflow: hidden; position: fixed; width: 100%; height: 100%; }
-
       #app { flex-direction: column; height: 100%; }
-
-      /* Mapa ocupa parte superior */
-      #map { height: 48vh; flex: none; }
-
-      /* Panel inferior con scroll táctil */
+      #map { height: 45vh; flex: none; }
       #sidebar {
-        width: 100%;
-        min-width: unset;
-        height: 52vh;
-        flex: none;
-        border-right: none;
-        border-top: 2px solid var(--accent);
-        border-radius: 16px 16px 0 0;
+        width: 100%; min-width: unset; flex: 1;
+        border-right: none; border-top: 2px solid var(--accent);
+        border-radius: 14px 14px 0 0;
         overflow-y: scroll !important;
         -webkit-overflow-scrolling: touch !important;
         overscroll-behavior: contain;
-        touch-action: pan-y;
       }
-
-      /* Header compacto */
-      #sidebar-header { padding: 12px 16px 8px; }
-      #sidebar-header h1 { font-size: 14px; }
-
-      /* Stats compacto */
-      #stats { padding: 8px 12px; gap: 6px; }
-      .stat-val { font-size: 16px; }
-
-      /* Lista con altura libre — el scroll del sidebar lo maneja */
-      #parcel-list {
-        overflow-y: visible !important;
-        flex: none;
-        height: auto;
-        padding-bottom: 40px;
-      }
-
-      /* Botón mapa base arriba */
+      #parcel-list { overflow-y: visible !important; height: auto; padding-bottom: 40px; }
       #basemap-btn { bottom: auto; top: 10px; right: 10px; font-size: 11px; padding: 6px 10px; }
     }
   </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- SIDEBAR -->
   <div id="sidebar">
     <div id="sidebar-header">
       <h1>📍 Catastro de Parcelas</h1>
@@ -229,187 +162,271 @@
 
     <div id="stats">
       <div class="stat-box">
-        <div class="stat-label">Total parcelas</div>
+        <div class="stat-label">Parcelas</div>
         <div class="stat-val" id="stat-total">—</div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Área total</div>
         <div class="stat-val" id="stat-area">—</div>
-        <div class="stat-unit">m²</div>
+        <div class="stat-unit" id="stat-unit">m²</div>
       </div>
     </div>
 
-    <div id="legend">
-      <div class="legend-title">Zonificación por pendiente</div>
-      <div id="legend-items"></div>
+    <!-- TABS -->
+    <div id="tabs">
+      <button class="tab-btn active" onclick="switchTab('pendiente')">🏔 Pendiente</button>
+      <button class="tab-btn" onclick="switchTab('elevacion')">📐 Elevación</button>
+      <button class="tab-btn" onclick="switchTab('estado')">🏷 Estado</button>
+    </div>
+
+    <!-- PANEL PENDIENTE -->
+    <div id="panel-pendiente" class="panel active">
+      <div class="legend-title">Zonificación por pendiente — clic para filtrar</div>
+      <div id="legend-pendiente"></div>
+    </div>
+
+    <!-- PANEL ELEVACIÓN -->
+    <div id="panel-elevacion" class="panel">
+      <div class="legend-title">Clasificación por elevación — clic para filtrar</div>
+      <div id="legend-elevacion"></div>
+    </div>
+
+    <!-- PANEL ESTADO -->
+    <div id="panel-estado" class="panel">
+      <div class="legend-title">Estado de venta — clic para filtrar</div>
+      <div id="legend-estado"></div>
     </div>
 
     <div id="parcel-list">
-      <div class="list-title">Parcelas</div>
+      <div class="list-title">Parcelas visibles</div>
       <div id="cards"></div>
     </div>
   </div>
 
-  <!-- MAPA -->
   <div id="map"></div>
-  <button id="basemap-btn" onclick="toggleBasemap()">🛰 Cambiar mapa base</button>
+  <button id="basemap-btn" onclick="toggleBasemap()">🛰 Satélite</button>
 </div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-// ============================================================
-//  CONFIGURACIÓN DE PENDIENTE
-// ============================================================
-// ── Clasificación de zonas por pendiente ─────────────────────
-const CLASES = [
-  { key: "A", label: "Zona A — Sin restricción (≤5%)",    color: "#1a9641", border: "#0f5c26", min:  0, max:  5  },
-  { key: "B", label: "Zona B — Baja restricción (5–12%)", color: "#a6d96a", border: "#6aaa1e", min:  5, max: 12  },
-  { key: "C", label: "Zona C — Residencial (12–20%)",     color: "#f5c842", border: "#c49a00", min: 12, max: 20  },
-  { key: "D", label: "Zona D — Protección (≥20%)",        color: "#d7191c", border: "#8b0000", min: 20, max: 999 },
+// ══════════════════════════════════════════════════════════════
+//  CAMPOS DEL GEOJSON
+// ══════════════════════════════════════════════════════════════
+const F_ID       = "CLAVECAT";
+const F_MAPA     = "MAPA";
+const F_OWNER    = "PAR_PROP";
+const F_AREA     = "PAR_AREA_C";
+const F_DIR      = "PAR_DIRECC";
+const F_TEXT     = "TEXT";
+const F_PMEAN    = "PEND_mean";
+const F_PMIN     = "PEND_min";
+const F_PMAX     = "PEND_max";
+const F_EMEAN    = "ELEV_mean";
+const F_EMIN     = "ELEV_min";
+const F_EMAX     = "ELEV_max";
+const F_ESTADO   = "ESTADO";
+
+// ══════════════════════════════════════════════════════════════
+//  CLASIFICACIÓN — PENDIENTE (Zonas A/B/C/D)
+// ══════════════════════════════════════════════════════════════
+const PEND_CLASES = [
+  { key:"A", label:"Zona A — Sin restricción (≤5%)",    color:"#1a9641", border:"#0f5c26", min:0,  max:5   },
+  { key:"B", label:"Zona B — Baja restricción (5–12%)", color:"#a6d96a", border:"#6aaa1e", min:5,  max:12  },
+  { key:"C", label:"Zona C — Residencial (12–20%)",     color:"#f5c842", border:"#c49a00", min:12, max:20  },
+  { key:"D", label:"Zona D — Protección (≥20%)",        color:"#d7191c", border:"#8b0000", min:20, max:9999},
 ];
 
-// ── Nombres de campos de tu GeoJSON ──────────────────────────
-const CAMPO_ID      = "CLAVECAT";       // identificador único
-const CAMPO_MAPA    = "MAPA";           // código de mapa catastral
-const CAMPO_OWNER   = "PAR_PROP";       // propietario
-const CAMPO_AREA    = "PAR_AREA_C";     // área en m²
-const CAMPO_DIR     = "PAR_DIRECC";     // dirección
-const CAMPO_TEXT    = "TEXT";           // número de parcela
-const CAMPO_PEND_MEAN = "PEND_mean";    // pendiente media  (numérico)
-const CAMPO_PEND_MIN  = "PEND_min";     // pendiente mínima (numérico)
-const CAMPO_PEND_MAX  = "PEND_max";     // pendiente máxima (numérico)
+// ══════════════════════════════════════════════════════════════
+//  CLASIFICACIÓN — ELEVACIÓN
+// ══════════════════════════════════════════════════════════════
+const ELEV_CLASES = [
+  { key:"E1", label:"Baja (0–500 m)",       color:"#74c8e0", border:"#2a8fa8", min:0,   max:500  },
+  { key:"E2", label:"Media (500–1000 m)",   color:"#4a86e8", border:"#1a56b8", min:500, max:1000 },
+  { key:"E3", label:"Alta (1000–1500 m)",   color:"#8e63ce", border:"#5e33a0", min:1000,max:1500 },
+  { key:"E4", label:"Muy alta (>1500 m)",   color:"#e0e0e0", border:"#999",    min:1500,max:9999 },
+];
 
-// ============================================================
-//  INICIALIZAR MAPA
-// ============================================================
+// ══════════════════════════════════════════════════════════════
+//  CLASIFICACIÓN — ESTADO DE VENTA
+// ══════════════════════════════════════════════════════════════
+const ESTADO_CLASES = [
+  { key:"EN VENTA",                      label:"En venta",                      color:"#1a9641", border:"#0f5c26" },
+  { key:"EN PROCESO DE NEGOCIACION",     label:"En proceso de negociación",     color:"#f5c842", border:"#c49a00" },
+  { key:"AUTORIZADO PARA VALUO",         label:"Autorizado para valúo",         color:"#4a86e8", border:"#1a56b8" },
+  { key:"PENDIENTE DE INICIO DE PROCESO",label:"Pendiente de inicio de proceso",color:"#fd8d3c", border:"#c45a00" },
+  { key:"NO VENDE",                      label:"No vende",                      color:"#d7191c", border:"#8b0000" },
+  { key:"-",                             label:"Sin estado",                    color:"#8b90a8", border:"#555"    },
+];
+
+// ══════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════
+let allFeatures = [];
+let geoLayer    = null;
+let selectedId  = null;
+let activeTab   = "pendiente";
+
+const activeP = new Set(PEND_CLASES.map(c => c.key));
+const activeE = new Set(ELEV_CLASES.map(c => c.key));
+const activeS = new Set(ESTADO_CLASES.map(c => c.key));
+
+// ══════════════════════════════════════════════════════════════
+//  MAPA BASE
+// ══════════════════════════════════════════════════════════════
 const map = L.map('map', { zoomControl: false });
 L.control.zoom({ position: 'topright' }).addTo(map);
-
-const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors', maxZoom: 20
-});
-const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  attribution: '© Esri World Imagery', maxZoom: 20
-});
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap', maxZoom:20 });
+const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'© Esri', maxZoom:20 });
 osmLayer.addTo(map);
 let satelite = false;
 function toggleBasemap() {
-  if (satelite) { map.removeLayer(satLayer); osmLayer.addTo(map); }
-  else          { map.removeLayer(osmLayer); satLayer.addTo(map); }
+  if (satelite) { map.removeLayer(satLayer); osmLayer.addTo(map); document.getElementById('basemap-btn').textContent = '🛰 Satélite'; }
+  else          { map.removeLayer(osmLayer); satLayer.addTo(map); document.getElementById('basemap-btn').textContent = '🗺 Mapa'; }
   satelite = !satelite;
 }
 
-// ============================================================
-//  ESTADO
-// ============================================================
-let allFeatures   = [];
-let geoLayer      = null;
-let selectedId    = null;
-let activeFilters = new Set(CLASES.map(c => c.key));
-
-// ============================================================
-//  COLOR POR CLASE
-// ============================================================
-function getClase(props) {
-  const val = parseFloat(props[CAMPO_PEND_MEAN]);
-  if (isNaN(val)) return null;
-  return CLASES.find(c => val >= c.min && val < c.max) || CLASES[CLASES.length - 1];
+// ══════════════════════════════════════════════════════════════
+//  CLASIFICADORES
+// ══════════════════════════════════════════════════════════════
+function getPend(props) {
+  const v = parseFloat(props[F_PMEAN]);
+  if (isNaN(v)) return null;
+  return PEND_CLASES.find(c => v >= c.min && v < c.max) || PEND_CLASES[PEND_CLASES.length-1];
 }
+function getElev(props) {
+  const v = parseFloat(props[F_EMEAN]);
+  if (isNaN(v)) return null;
+  return ELEV_CLASES.find(c => v >= c.min && v < c.max) || ELEV_CLASES[ELEV_CLASES.length-1];
+}
+function getEstado(props) {
+  const v = (props[F_ESTADO] || "-").trim().toUpperCase();
+  return ESTADO_CLASES.find(c => c.key === v) || ESTADO_CLASES[ESTADO_CLASES.length-1];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ESTILO SEGÚN TAB ACTIVO
+// ══════════════════════════════════════════════════════════════
 function styleFeature(feat) {
-  const cl = getClase(feat.properties);
+  const p = feat.properties;
+  let cl;
+  if (activeTab === "pendiente") cl = getPend(p);
+  else if (activeTab === "elevacion") cl = getElev(p);
+  else cl = getEstado(p);
   return {
     fillColor:   cl ? cl.color  : "#888",
-    fillOpacity: 0.7,
+    fillOpacity: 0.72,
     color:       cl ? cl.border : "#555",
     weight: 1.5,
   };
 }
 
-// ============================================================
+// ══════════════════════════════════════════════════════════════
 //  POPUP
-// ============================================================
+// ══════════════════════════════════════════════════════════════
 function makePopup(p) {
-  const cl = getClase(p);
-  const claseLabel = cl ? cl.label : "Sin datos";
-  const claseColor = cl ? cl.color : "#888";
-  const pendMean = parseFloat(p[CAMPO_PEND_MEAN]);
-  const pendMin  = parseFloat(p[CAMPO_PEND_MIN]);
-  const pendMax  = parseFloat(p[CAMPO_PEND_MAX]);
-  // Limpiar nombre propietario (quitar parte entre paréntesis)
-  const propFull = p[CAMPO_OWNER] || "Sin propietario";
-  const propClean = propFull.replace(/\(.*?\)/g, "").trim();
+  const cp = getPend(p);
+  const ce = getElev(p);
+  const cs = getEstado(p);
+  const propClean = (p[F_OWNER]||"Sin propietario").replace(/\(.*?\)/g,"").trim();
+  const pendMean = parseFloat(p[F_PMEAN]);
+  const pendMin  = parseFloat(p[F_PMIN]);
+  const pendMax  = parseFloat(p[F_PMAX]);
+  const elevMean = parseFloat(p[F_EMEAN]);
+  const elevMin  = parseFloat(p[F_EMIN]);
+  const elevMax  = parseFloat(p[F_EMAX]);
 
-  return `
-    <div class="popup-inner">
-      <div class="popup-id">Parcela ${p[CAMPO_TEXT]||"—"} · ${p[CAMPO_MAPA]||""}</div>
-      <div class="popup-name">${propClean}</div>
-      <div class="popup-row">
-        <span class="popup-label">Clave catastral</span>
-        <span class="popup-val" style="font-size:10px;">${p[CAMPO_ID]||"—"}</span>
-      </div>
-      <div class="popup-row">
-        <span class="popup-label">Área</span>
-        <span class="popup-val">${isNaN(p[CAMPO_AREA]) ? "—" : Number(p[CAMPO_AREA]).toLocaleString("es",{maximumFractionDigits:1})} m²</span>
-      </div>
-      <div class="popup-row">
-        <span class="popup-label">Zona</span>
-        <span class="popup-val" style="color:${claseColor}; font-weight:700;">${cl ? cl.key : "—"} &nbsp;·&nbsp; ${claseLabel.split("—")[1]?.trim()||claseLabel}</span>
-      </div>
-      <div class="popup-row">
-        <span class="popup-label">Pendiente media</span>
-        <span class="popup-val" style="color:${claseColor};">${isNaN(pendMean) ? "—" : pendMean.toFixed(1) + "%"}</span>
-      </div>
-      <div class="popup-row">
-        <span class="popup-label">Pendiente min / max</span>
-        <span class="popup-val">${isNaN(pendMin) ? "—" : pendMin.toFixed(1)}% / ${isNaN(pendMax) ? "—" : pendMax.toFixed(1)}%</span>
-      </div>
-      <div class="popup-row" style="border-bottom:none;">
-        <span class="popup-label" style="font-size:10px;line-height:1.4;">${p[CAMPO_DIR]||""}</span>
-      </div>
-    </div>`;
+  return `<div class="popup-inner">
+    <div class="popup-id">Parcela ${p[F_TEXT]||"—"} · ${p[F_MAPA]||""}</div>
+    <div class="popup-name">${propClean}</div>
+
+    <div class="popup-section-title">📋 Información general</div>
+    <div class="popup-row">
+      <span class="popup-label">Clave catastral</span>
+      <span class="popup-val" style="font-size:10px;">${p[F_ID]||"—"}</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-label">Área</span>
+      <span class="popup-val">${isNaN(p[F_AREA])?"—":Number(p[F_AREA]).toLocaleString("es",{maximumFractionDigits:1})} m²</span>
+    </div>
+    <div class="popup-row" style="border-bottom:none;">
+      <span class="popup-label" style="font-size:10px;line-height:1.4;color:var(--text2);">${p[F_DIR]||""}</span>
+    </div>
+
+    <div class="popup-section-title">🏔 Pendiente</div>
+    <div class="popup-row">
+      <span class="popup-label">Zona</span>
+      <span class="popup-val" style="color:${cp?cp.color:'#888'};">Zona ${cp?cp.key:"—"}</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-label">Media / Min / Max</span>
+      <span class="popup-val">${isNaN(pendMean)?"—":pendMean.toFixed(1)}% / ${isNaN(pendMin)?"—":pendMin.toFixed(1)}% / ${isNaN(pendMax)?"—":pendMax.toFixed(1)}%</span>
+    </div>
+    <div class="popup-row" style="border-bottom:none;">
+      <span class="popup-label">Clasificación</span>
+      <span class="popup-val" style="color:${cp?cp.color:'#888'};">${cp?cp.label.split("—")[1].trim():"—"}</span>
+    </div>
+
+    <div class="popup-section-title">📐 Elevación</div>
+    <div class="popup-row">
+      <span class="popup-label">Rango</span>
+      <span class="popup-val" style="color:${ce?ce.color:'#888'};">${ce?ce.label:"—"}</span>
+    </div>
+    <div class="popup-row" style="border-bottom:none;">
+      <span class="popup-label">Media / Min / Max</span>
+      <span class="popup-val">${isNaN(elevMean)?"—":elevMean.toFixed(0)} / ${isNaN(elevMin)?"—":elevMin.toFixed(0)} / ${isNaN(elevMax)?"—":elevMax.toFixed(0)} m</span>
+    </div>
+
+    <div class="popup-section-title">🏷 Estado de venta</div>
+    <span class="popup-status-badge" style="color:${cs?cs.color:'#888'};background:${cs?cs.color+'22':'#88888822'};border-color:${cs?cs.color+'55':'#88888855'};">
+      ${cs?cs.label:"Sin estado"}
+    </span>
+  </div>`;
 }
 
-// ============================================================
-//  BADGE COLOR
-// ============================================================
-function badgeStyle(props) {
-  const cl = getClase(props);
-  if (!cl) return "";
-  return `background:${cl.color}22; color:${cl.color}; border-color:${cl.color}55;`;
+// ══════════════════════════════════════════════════════════════
+//  BADGE PARA TARJETA SEGÚN TAB
+// ══════════════════════════════════════════════════════════════
+function getBadgeForTab(p) {
+  let cl, txt;
+  if (activeTab === "pendiente") {
+    cl = getPend(p);
+    txt = cl ? `Zona ${cl.key}` : "—";
+  } else if (activeTab === "elevacion") {
+    cl = getElev(p);
+    txt = cl ? cl.label.split(" ")[0] + " " + cl.label.split(" ")[1] : "—";
+  } else {
+    cl = getEstado(p);
+    txt = cl ? cl.label.split(" ").slice(0,2).join(" ") : "—";
+  }
+  if (!cl) return { style:"", txt:"—" };
+  return {
+    style: `background:${cl.color}22;color:${cl.color};border-color:${cl.color}55;`,
+    txt
+  };
 }
 
-// ============================================================
-//  RENDERIZAR CAPA GEOJSON
-// ============================================================
+// ══════════════════════════════════════════════════════════════
+//  RENDER CAPA
+// ══════════════════════════════════════════════════════════════
 function renderLayer(features) {
   if (geoLayer) map.removeLayer(geoLayer);
-
   geoLayer = L.geoJSON({ type:"FeatureCollection", features }, {
     style: styleFeature,
     onEachFeature(feat, layer) {
       const p = feat.properties;
-      layer.bindPopup(makePopup(p), { maxWidth: 280 });
+      layer.bindPopup(makePopup(p), { maxWidth: 310 });
       layer.on({
-        mouseover(e) {
-          e.target.setStyle({ fillOpacity: 0.92, weight: 2.5 });
-        },
-        mouseout(e) {
-          if (p[CAMPO_ID] !== selectedId) geoLayer.resetStyle(e.target);
-        },
-        click(e) {
-          selectedId = p[CAMPO_ID];
-          highlightCard(selectedId);
-        }
+        mouseover(e) { e.target.setStyle({ fillOpacity:0.92, weight:2.5 }); },
+        mouseout(e)  { if (p[F_ID] !== selectedId) geoLayer.resetStyle(e.target); },
+        click()      { selectedId = p[F_ID]; highlightCard(selectedId); }
       });
     }
   }).addTo(map);
 }
 
-// ============================================================
-//  TARJETAS LATERALES
-// ============================================================
+// ══════════════════════════════════════════════════════════════
+//  RENDER TARJETAS
+// ══════════════════════════════════════════════════════════════
 function renderCards(features) {
   const container = document.getElementById('cards');
   container.innerHTML = "";
@@ -417,24 +434,28 @@ function renderCards(features) {
     const p = feat.properties;
     const div = document.createElement('div');
     div.className = 'parcel-card';
-    div.dataset.id = p[CAMPO_ID];
-    const cl2 = getClase(p);
-    const propShort = (p[CAMPO_OWNER]||"Sin propietario").replace(/[(].*?[)]/g,"").trim().split(",").slice(0,2).join(", ");
+    div.dataset.id = p[F_ID];
+    const { style, txt } = getBadgeForTab(p);
+    const propShort = (p[F_OWNER]||"Sin propietario").replace(/\(.*?\)/g,"").trim().split(",").slice(0,2).join(", ");
+    const pendMean = parseFloat(p[F_PMEAN]);
+    const elevMean = parseFloat(p[F_EMEAN]);
     div.innerHTML = `
       <div class="pc-top">
-        <span class="pc-id">Parc. ${p[CAMPO_TEXT]||"—"}</span>
-        <span class="pc-badge" style="${badgeStyle(p)}">Zona ${cl2 ? cl2.key : "—"}</span>
+        <span class="pc-id">Parc. ${p[F_TEXT]||"—"}</span>
+        <span class="pc-badge" style="${style}">${txt}</span>
       </div>
       <div class="pc-owner">${propShort}</div>
-      <div class="pc-area">${Number(p[CAMPO_AREA]||0).toLocaleString("es",{maximumFractionDigits:1})} m² · ${parseFloat(p[CAMPO_PEND_MEAN]).toFixed(1)}% pend.</div>
-    `;
+      <div class="pc-area">
+        ${Number(p[F_AREA]||0).toLocaleString("es",{maximumFractionDigits:1})} m²
+        · ${isNaN(pendMean)?"—":pendMean.toFixed(1)}% pend.
+        · ${isNaN(elevMean)?"—":elevMean.toFixed(0)} m
+      </div>`;
     div.addEventListener('click', () => {
-      selectedId = p[CAMPO_ID];
+      selectedId = p[F_ID];
       highlightCard(selectedId);
-      // Volar al polígono
       geoLayer.eachLayer(l => {
-        if (l.feature.properties[CAMPO_ID] === selectedId) {
-          map.fitBounds(l.getBounds(), { maxZoom: 17, padding: [40,40] });
+        if (l.feature && l.feature.properties[F_ID] === selectedId) {
+          map.fitBounds(l.getBounds(), { maxZoom:17, padding:[40,40] });
           l.openPopup();
         }
       });
@@ -444,97 +465,118 @@ function renderCards(features) {
 }
 
 function highlightCard(id) {
-  document.querySelectorAll('.parcel-card').forEach(c => {
-    c.classList.toggle('selected', c.dataset.id === id);
-  });
+  document.querySelectorAll('.parcel-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
 }
 
-// ============================================================
-//  LEYENDA INTERACTIVA
-// ============================================================
-function renderLegend(features) {
+// ══════════════════════════════════════════════════════════════
+//  RENDER LEYENDAS
+// ══════════════════════════════════════════════════════════════
+function renderLegendPanel(containerId, clases, activeSet, getClaseFn, features) {
   const counts = {};
-  CLASES.forEach(c => counts[c.key] = 0);
+  clases.forEach(c => counts[c.key] = 0);
   features.forEach(f => {
-    const cl = getClase(f.properties);
+    const cl = getClaseFn(f.properties);
     if (cl) counts[cl.key] = (counts[cl.key]||0) + 1;
   });
-
-  const container = document.getElementById('legend-items');
+  const container = document.getElementById(containerId);
   container.innerHTML = "";
-  CLASES.forEach(cl => {
+  clases.forEach(cl => {
     const item = document.createElement('div');
-    item.className = 'legend-item' + (activeFilters.has(cl.key) ? '' : ' inactive');
+    item.className = 'legend-item' + (activeSet.has(cl.key) ? '' : ' inactive');
     item.innerHTML = `
-      <div class="legend-dot" style="background:${cl.color}; border-color:${cl.border};"></div>
+      <div class="legend-dot" style="background:${cl.color};border-color:${cl.border};"></div>
       <span class="legend-text">${cl.label}</span>
-      <span class="legend-count">${counts[cl.key]||0}</span>
-    `;
+      <span class="legend-count">${counts[cl.key]||0}</span>`;
     item.addEventListener('click', () => {
-      if (activeFilters.has(cl.key)) activeFilters.delete(cl.key);
-      else activeFilters.add(cl.key);
+      if (activeSet.has(cl.key)) activeSet.delete(cl.key);
+      else activeSet.add(cl.key);
       applyFilters();
     });
     container.appendChild(item);
   });
 }
 
-// ============================================================
-//  FILTROS Y BÚSQUEDA
-// ============================================================
+function renderAllLegends() {
+  renderLegendPanel('legend-pendiente', PEND_CLASES, activeP, getPend, allFeatures);
+  renderLegendPanel('legend-elevacion', ELEV_CLASES, activeE, getElev, allFeatures);
+  renderLegendPanel('legend-estado',    ESTADO_CLASES, activeS, getEstado, allFeatures);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  // Repintar mapa y tarjetas con nueva clasificación
+  applyFilters();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FILTROS
+// ══════════════════════════════════════════════════════════════
 function applyFilters() {
   const q = document.getElementById('search').value.toLowerCase().trim();
   const filtered = allFeatures.filter(f => {
     const p = f.properties;
-    const cl = getClase(p);
-    if (cl && !activeFilters.has(cl.key)) return false;
+    // Filtro pendiente
+    const cp = getPend(p);
+    if (cp && !activeP.has(cp.key)) return false;
+    // Filtro elevación
+    const ce = getElev(p);
+    if (ce && !activeE.has(ce.key)) return false;
+    // Filtro estado
+    const cs = getEstado(p);
+    if (cs && !activeS.has(cs.key)) return false;
+    // Búsqueda texto
     if (q) {
-      const haystack = [p[CAMPO_ID], p[CAMPO_OWNER], p[CAMPO_TEXT], p[CAMPO_MAPA], p[CAMPO_DIR]]
+      const hay = [p[F_ID], p[F_OWNER], p[F_TEXT], p[F_MAPA], p[F_DIR], p[F_ESTADO]]
         .filter(Boolean).join(' ').toLowerCase();
-      if (!haystack.includes(q)) return false;
+      if (!hay.includes(q)) return false;
     }
     return true;
   });
   renderLayer(filtered);
   renderCards(filtered);
-  renderLegend(allFeatures); // siempre sobre total
+  renderAllLegends();
   updateStats(filtered);
 }
 
 function updateStats(features) {
   document.getElementById('stat-total').textContent = features.length;
-  const totalArea = features.reduce((s, f) => s + (f.properties[CAMPO_AREA]||0), 0);
-  document.getElementById('stat-area').textContent =
-    totalArea >= 10000
-      ? (totalArea/10000).toLocaleString('es',{maximumFractionDigits:2}) + " ha"
-      : totalArea.toLocaleString('es',{maximumFractionDigits:0});
-  if (totalArea >= 10000)
-    document.querySelector('.stat-unit').textContent = "ha";
+  const totalArea = features.reduce((s, f) => s + (parseFloat(f.properties[F_AREA])||0), 0);
+  const unit = document.getElementById('stat-unit');
+  if (totalArea >= 10000) {
+    document.getElementById('stat-area').textContent = (totalArea/10000).toLocaleString('es',{maximumFractionDigits:2});
+    unit.textContent = "ha";
+  } else {
+    document.getElementById('stat-area').textContent = totalArea.toLocaleString('es',{maximumFractionDigits:0});
+    unit.textContent = "m²";
+  }
 }
 
 document.getElementById('search').addEventListener('input', applyFilters);
 
-// ============================================================
-//  CARGAR GEOJSON
-// ============================================================
+// ══════════════════════════════════════════════════════════════
+//  CARGAR DATOS
+// ══════════════════════════════════════════════════════════════
 fetch('parcelas.prueba.geojson')
   .then(r => r.json())
   .then(data => {
     allFeatures = data.features || [];
-
-    document.getElementById('subtitle').textContent =
-      `${allFeatures.length} parcelas cargadas`;
-
+    document.getElementById('subtitle').textContent = `${allFeatures.length} parcelas cargadas`;
     renderLayer(allFeatures);
     renderCards(allFeatures);
-    renderLegend(allFeatures);
+    renderAllLegends();
     updateStats(allFeatures);
-
-    if (geoLayer) map.fitBounds(geoLayer.getBounds(), { padding: [20,20] });
+    if (geoLayer) map.fitBounds(geoLayer.getBounds(), { padding:[20,20] });
   })
   .catch(err => {
     document.getElementById('subtitle').textContent = "Error cargando datos";
-    console.error("Error cargando parcelas.geojson:", err);
+    console.error("Error:", err);
   });
 </script>
 </body>
