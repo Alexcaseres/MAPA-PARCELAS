@@ -240,22 +240,23 @@ const PEND_CLASES = [
 //  CLASIFICACIÓN — ELEVACIÓN
 // ══════════════════════════════════════════════════════════════
 const ELEV_CLASES = [
-  { key:"E1", label:"Baja (0–500 m)",       color:"#74c8e0", border:"#2a8fa8", min:0,   max:500  },
-  { key:"E2", label:"Media (500–1000 m)",   color:"#4a86e8", border:"#1a56b8", min:500, max:1000 },
-  { key:"E3", label:"Alta (1000–1500 m)",   color:"#8e63ce", border:"#5e33a0", min:1000,max:1500 },
-  { key:"E4", label:"Muy alta (>1500 m)",   color:"#e0e0e0", border:"#999",    min:1500,max:9999 },
+  { key:"E1", label:"Rango 1 (1700–1840 m)", color:"#c7e9b4", border:"#7ec47e", min:0,    max:1840 },
+  { key:"E2", label:"Rango 2 (1840–1980 m)", color:"#74c8e0", border:"#2a8fa8", min:1840, max:1980 },
+  { key:"E3", label:"Rango 3 (1980–2120 m)", color:"#4a86e8", border:"#1a56b8", min:1980, max:2120 },
+  { key:"E4", label:"Rango 4 (2120–2260 m)", color:"#8e63ce", border:"#5e33a0", min:2120, max:2260 },
+  { key:"E5", label:"Rango 5 (2260–2400 m)", color:"#e0e0e0", border:"#999",    min:2260, max:9999 },
 ];
 
 // ══════════════════════════════════════════════════════════════
 //  CLASIFICACIÓN — ESTADO DE VENTA
 // ══════════════════════════════════════════════════════════════
 const ESTADO_CLASES = [
-  { key:"EN VENTA",                      label:"En venta",                      color:"#1a9641", border:"#0f5c26" },
-  { key:"EN PROCESO DE NEGOCIACION",     label:"En proceso de negociación",     color:"#f5c842", border:"#c49a00" },
-  { key:"AUTORIZADO PARA VALUO",         label:"Autorizado para valúo",         color:"#4a86e8", border:"#1a56b8" },
-  { key:"PENDIENTE DE INICIO DE PROCESO",label:"Pendiente de inicio de proceso",color:"#fd8d3c", border:"#c45a00" },
-  { key:"NO VENDE",                      label:"No vende",                      color:"#d7191c", border:"#8b0000" },
-  { key:"-",                             label:"Sin estado",                    color:"#8b90a8", border:"#555"    },
+  { key:"EN VENTA",                       label:"En venta",                       color:"#1a9641", border:"#0f5c26" },
+  { key:"EN PROCESO DE NEGOCIACION",      label:"En proceso de negociación",      color:"#f5c842", border:"#c49a00" },
+  { key:"AUTORIZACION PARA VALUO",        label:"Autorización para valúo",        color:"#4a86e8", border:"#1a56b8" },
+  { key:"PENDIENTE DE INICIO DE PROCESO", label:"Pendiente de inicio de proceso", color:"#fd8d3c", border:"#c45a00" },
+  { key:"NO VENDE",                       label:"No vende",                       color:"#d7191c", border:"#8b0000" },
+  { key:"-",                              label:"Sin estado",                     color:"#8b90a8", border:"#555"    },
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -295,11 +296,14 @@ function getPend(props) {
 }
 function getElev(props) {
   const v = parseFloat(props[F_EMEAN]);
-  if (isNaN(v)) return null;
+  if (isNaN(v) || v === null) return ELEV_CLASES[0]; // sin datos → rango 1
   return ELEV_CLASES.find(c => v >= c.min && v < c.max) || ELEV_CLASES[ELEV_CLASES.length-1];
 }
 function getEstado(props) {
-  const v = (props[F_ESTADO] || "-").trim().toUpperCase();
+  // Normaliza: quita espacios extra, convierte a mayúsculas
+  const raw = props[F_ESTADO];
+  if (raw === null || raw === undefined) return ESTADO_CLASES[ESTADO_CLASES.length-1];
+  const v = String(raw).trim().toUpperCase().replace(/\s+/g, " ");
   return ESTADO_CLASES.find(c => c.key === v) || ESTADO_CLASES[ESTADO_CLASES.length-1];
 }
 
