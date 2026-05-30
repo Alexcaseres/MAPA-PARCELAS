@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard de Proyectos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14; --s1:#0d1220; --s2:#131929; --s3:#1a2235;
+  --border:#1e2d45; --border2:#253450;
+  --acc:#00d4ff; --acc2:#0099cc; --acc-glow:rgba(0,212,255,.15);
+  --green:#00e676; --yellow:#ffd740; --orange:#ff9100; --red:#ff3d00; --purple:#e040fb;
+  --text:#e8f4ff; --text2:#7a9bbf; --text3:#4a6a8a;
+  --font:'Outfit',sans-serif; --mono:'JetBrains Mono',monospace; --display:'Syne',sans-serif;
+  --r:10px; --r2:16px;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
+#app{display:flex;height:100vh;width:100vw}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:360px;min-width:360px;background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:1000;overflow:hidden;
+  position:relative;
+}
+#sidebar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--acc),var(--purple),var(--acc));
+  background-size:200%;animation:shimmer 3s linear infinite;
+}
+@keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
+
+/* HEADER */
+#hdr{padding:20px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+#hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#logo{display:flex;align-items:center;gap:10px}
+#logo-icon{
+  width:34px;height:34px;background:linear-gradient(135deg,var(--acc),var(--purple));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+#logo-text{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.02em}
+#logo-sub{font-size:10px;color:var(--text2);letter-spacing:.08em;text-transform:uppercase}
+#acc-btn{
+  display:flex;align-items:center;gap:6px;background:var(--s3);
+  border:1px solid var(--border2);border-radius:7px;padding:6px 10px;
+  color:var(--acc);font-size:11px;font-weight:500;cursor:pointer;
+  text-decoration:none;transition:all .2s;font-family:var(--font);
+}
+#acc-btn:hover{background:var(--acc-glow);border-color:var(--acc)}
+#acc-btn svg{width:14px;height:14px;flex-shrink:0}
+
+/* KPI STRIP */
+#kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.kpi{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center}
+.kpi-val{font-family:var(--display);font-size:18px;font-weight:700;line-height:1}
+.kpi-lbl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+/* FILTERS */
+#filters{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+#search{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;font-size:13px;
+  color:var(--text);font-family:var(--font);outline:none;
+}
+#search:focus{border-color:var(--acc)}
+#search::placeholder{color:var(--text3)}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--border2);background:var(--s2);color:var(--text2);
+  transition:all .15s;font-family:var(--font);white-space:nowrap;
+}
+.chip:hover{border-color:var(--acc);color:var(--text)}
+.chip.on{background:var(--acc-glow);border-color:var(--acc);color:var(--acc)}
+
+/* LIST */
+#list{flex:1;overflow-y:auto;padding:8px}
+#list::-webkit-scrollbar{width:3px}
+#list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.pcard{
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);
+  padding:12px 14px;margin-bottom:7px;cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden;
+}
+.pcard::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--c,#555);border-radius:3px 0 0 3px;
+}
+.pcard:hover,.pcard.sel{border-color:var(--acc);background:var(--s3)}
+.pc-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.pc-id{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.05em}
+.pc-badge{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:600;border:1px solid}
+.pc-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
+.pc-meta{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pc-tipo{font-size:11px;color:var(--text2)}
+.pc-mun{font-size:11px;color:var(--text3)}
+.progress-wrap{display:flex;align-items:center;gap:8px}
+.progress-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width .4s}
+.progress-pct{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}
+.pc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.pc-resp{font-size:10px;color:var(--text3)}
+.pc-riesgos{display:flex;gap:4px}
+.risk-tag{font-size:9px;padding:2px 6px;background:rgba(255,61,0,.1);color:#ff7043;border-radius:3px;border:1px solid rgba(255,61,0,.2)}
+
+/* MAP */
+#map{flex:1;position:relative}
+#map-overlay{
+  position:absolute;top:14px;left:14px;z-index:800;
+  display:flex;gap:8px;flex-direction:column;pointer-events:none;
+}
+#map-overlay>*{pointer-events:all}
+.map-btn{
+  background:var(--s1);border:1px solid var(--border2);border-radius:8px;
+  padding:8px 14px;font-size:12px;color:var(--text2);cursor:pointer;
+  font-family:var(--font);transition:all .15s;white-space:nowrap;
+}
+.map-btn:hover,.map-btn.on{background:var(--acc-glow);border-color:var(--acc);color:var(--acc)}
+#route-panel{
+  background:var(--s1);border:1px solid var(--border2);border-radius:10px;
+  padding:12px;min-width:200px;display:none;
+}
+#route-panel.open{display:block}
+#route-panel h4{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+#route-origin{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);
+  font-family:var(--font);outline:none;margin-bottom:6px;
+}
+#route-origin::placeholder{color:var(--text3)}
+#route-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+.route-item{
+  display:flex;align-items:center;gap:8px;padding:5px 8px;
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;transition:border-color .15s;font-size:11px;
+}
+.route-item:hover{border-color:var(--acc)}
+.route-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* POPUP */
+.leaflet-popup-content-wrapper{background:var(--s1)!important;border:1px solid var(--border2)!important;border-radius:var(--r2)!important;box-shadow:0 12px 40px rgba(0,0,0,.7)!important;padding:0!important;max-width:320px!important;overflow:hidden!important}
+.leaflet-popup-tip{background:var(--s1)!important}
+.leaflet-popup-close-button{color:var(--text2)!important;top:10px!important;right:12px!important;font-size:18px!important;z-index:2}
+.leaflet-popup-content{margin:0!important;width:auto!important;color:var(--text)}
+.pop{padding:16px 18px;font-family:var(--font)}
+.pop-head{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.pop-id{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:3px}
+.pop-name{font-size:15px;font-weight:700;font-family:var(--display);line-height:1.2;margin-bottom:6px}
+.pop-badges{display:flex;gap:6px;flex-wrap:wrap}
+.pop-badge{font-size:10px;padding:3px 9px;border-radius:12px;font-weight:600;border:1px solid}
+.pop-section{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 5px;padding-top:8px;border-top:1px solid var(--border)}
+.pop-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border)}
+.pop-row:last-child{border-bottom:none}
+.pop-lbl{font-size:11px;color:var(--text2)}
+.pop-val{font-size:11px;font-weight:500;font-family:var(--mono);text-align:right}
+.pop-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-top:4px;word-wrap:break-word}
+.pop-progress{margin:8px 0}
+.pop-progress-bar{width:100%;height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin-top:4px}
+.pop-progress-fill{height:100%;border-radius:3px}
+.pop-riesgos{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.pop-acc-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin-top:12px;padding:9px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(224,64,251,.1));
+  border:1px solid var(--border2);border-radius:8px;color:var(--acc);
+  font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;
+  transition:all .2s;font-family:var(--font);width:100%;text-align:center;
+}
+.pop-acc-btn:hover{border-color:var(--acc);background:var(--acc-glow)}
+.pop-route-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin-top:6px;padding:8px;background:var(--s2);
+  border:1px solid var(--border);border-radius:8px;color:var(--text2);
+  font-size:12px;cursor:pointer;transition:all .2s;font-family:var(--font);width:100%;
+}
+.pop-route-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* MOBILE */
+@media(max-width:700px){
+  #app{flex-direction:column}
+  #map{height:50vh;flex:none}
+  #sidebar{width:100%;min-width:unset;flex:1;border-right:none;border-top:1px solid var(--border2);overflow-y:scroll;-webkit-overflow-scrolling:touch}
+  #list{overflow-y:visible;height:auto;padding-bottom:40px}
+  #map-overlay{top:8px;left:8px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="hdr">
+    <div id="hdr-top">
+      <div id="logo">
+        <div id="logo-icon">🏗</div>
+        <div>
+          <div id="logo-text">Proyectos</div>
+          <div id="logo-sub">Dashboard de obra</div>
+        </div>
+      </div>
+      <a id="acc-btn" href="https://acc.autodesk.com" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        ACC
+      </a>
+    </div>
+    <div id="kpis">
+      <div class="kpi"><div class="kpi-val" id="k-total" style="color:var(--acc)">—</div><div class="kpi-lbl">Total</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-ejec" style="color:var(--green)">—</div><div class="kpi-lbl">Activos</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-avg" style="color:var(--yellow)">—</div><div class="kpi-lbl">Avance</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-risk" style="color:var(--red)">—</div><div class="kpi-lbl">Con riesgo</div></div>
+    </div>
+  </div>
+
+  <div id="filters">
+    <input id="search" type="text" placeholder="🔍  Buscar proyecto, municipio, contratista..."/>
+    <div class="filter-row" id="f-estado">
+      <span style="font-size:11px;color:var(--text3);align-self:center;">Estado:</span>
+    </div>
+    <div class="filter-row" id="f-tipo">
+      <span style="font-size:11px;color:var(--text3);align-self:center;">Tipo:</span>
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<!-- MAP -->
+<div id="map">
+  <div id="map-overlay">
+    <button class="map-btn" onclick="toggleBasemap()">🛰 Satélite</button>
+    <button class="map-btn" id="btn-route" onclick="toggleRoutePanel()">🧭 Rutas</button>
+    <button class="map-btn" id="btn-risks" onclick="toggleRisks()">⚠️ Riesgos</button>
+    <button class="map-btn" id="btn-cluster" onclick="toggleCluster()">📍 Agrupar</button>
+    <div id="route-panel">
+      <h4>🧭 Calcular ruta</h4>
+      <input id="route-origin" type="text" placeholder="Tu ubicación (lat, lng)"/>
+      <div id="route-list"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+//  COLORES POR ESTADO
+// ══════════════════════════════════════════════════════════════
+const ESTADO_COLORS = {
+  "En ejecución":  { c:"#00e676", b:"#00c853" },
+  "Suspendido":    { c:"#ffd740", b:"#ffa000" },
+  "Por iniciar":   { c:"#00d4ff", b:"#0099cc" },
+  "Finalizado":    { c:"#7a9bbf", b:"#4a6a8a" },
+  "Con atraso":    { c:"#ff3d00", b:"#bf360c" },
+};
+const TIPO_COLORS = {
+  "Infraestructura Vial": "#e040fb",
+  "Edificación":          "#00d4ff",
+  "Infraestructura":      "#ffd740",
+  "Mixto":                "#00e676",
+};
+function getEC(estado){ return ESTADO_COLORS[estado] || {c:"#7a9bbf",b:"#4a6a8a"} }
+function getTColor(tipo){ return TIPO_COLORS[tipo] || "#7a9bbf" }
+
+// ══════════════════════════════════════════════════════════════
+//  MAPA
+// ══════════════════════════════════════════════════════════════
+const map = L.map('map',{zoomControl:false});
+L.control.zoom({position:'topright'}).addTo(map);
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:20});
+const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:20});
+osm.addTo(map);
+let isSat=false;
+function toggleBasemap(){
+  if(isSat){map.removeLayer(sat);osm.addTo(map);document.querySelector('.map-btn').textContent='🛰 Satélite';}
+  else{map.removeLayer(osm);sat.addTo(map);document.querySelector('.map-btn').textContent='🗺 Mapa';}
+  isSat=!isSat;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MARCADORES PERSONALIZADOS
+// ══════════════════════════════════════════════════════════════
+function makeIcon(proj){
+  const ec = getEC(proj.estado);
+  const tc = getTColor(proj.tipo);
+  const emoji = proj.tipo==="Infraestructura Vial"?"🛣":proj.tipo==="Edificación"?"🏢":proj.tipo==="Infraestructura"?"💧":"🏗";
+  const html = `
+    <div style="position:relative;width:44px;height:50px">
+      <div style="
+        width:44px;height:44px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+        background:linear-gradient(135deg,${ec.b},${tc}44);
+        border:2px solid ${ec.c};
+        box-shadow:0 0 12px ${ec.c}66;
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <span style="transform:rotate(45deg);font-size:18px">${emoji}</span>
+      </div>
+      <div style="
+        position:absolute;bottom:-2px;right:-4px;
+        background:${ec.c};color:#000;
+        font-size:9px;font-weight:700;
+        padding:1px 5px;border-radius:8px;
+        font-family:'JetBrains Mono',monospace;
+      ">${proj.avance}%</div>
+    </div>`;
+  return L.divIcon({html,className:'',iconSize:[44,50],iconAnchor:[22,50],popupAnchor:[0,-52]});
+}
+
+// ══════════════════════════════════════════════════════════════
+//  POPUP
+// ══════════════════════════════════════════════════════════════
+function makePopup(p){
+  const ec = getEC(p.estado);
+  const tc = getTColor(p.tipo);
+  const presupuesto = p.presupuesto ? `$${Number(p.presupuesto).toLocaleString('es')}` : "—";
+  const riesgos = (p.riesgos||[]).map(r=>`<span class="risk-tag">${r}</span>`).join('');
+  const dias = p.fecha_fin ? Math.ceil((new Date(p.fecha_fin)-new Date())/(1000*60*60*24)) : null;
+  const diasTxt = dias!==null ? (dias>0?`${dias} días restantes`:`Venció hace ${Math.abs(dias)} días`) : "—";
+  const diasColor = dias!==null && dias<30 ? "var(--red)" : dias!==null && dias<90 ? "var(--yellow)" : "var(--text)";
+
+  return `<div class="pop">
+    <div class="pop-head">
+      <div class="pop-id">${p.id} · ${p.municipio||""}</div>
+      <div class="pop-name">${p.nombre}</div>
+      <div class="pop-badges">
+        <span class="pop-badge" style="color:${ec.c};background:${ec.c}18;border-color:${ec.c}44">${p.estado}</span>
+        <span class="pop-badge" style="color:${tc};background:${tc}18;border-color:${tc}44">${p.subtipo||p.tipo}</span>
+        ${p.zona_riesgo?`<span class="pop-badge" style="color:var(--orange);background:rgba(255,145,0,.12);border-color:rgba(255,145,0,.3)">⚠ ${p.zona_riesgo}</span>`:''}
+      </div>
+    </div>
+
+    <div class="pop-progress">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:11px;color:var(--text2)">Avance de obra</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${ec.c}">${p.avance}%</span>
+      </div>
+      <div class="pop-progress-bar">
+        <div class="pop-progress-fill" style="width:${p.avance}%;background:linear-gradient(90deg,${ec.b},${ec.c})"></div>
+      </div>
+    </div>
+
+    <div class="pop-section">📋 Información del proyecto</div>
+    <div class="pop-row"><span class="pop-lbl">Contratista</span><span class="pop-val" style="font-size:10px;max-width:160px;text-align:right;word-wrap:break-word;font-family:var(--font)">${p.contratista||"—"}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Responsable</span><span class="pop-val">${p.responsable||"—"}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Presupuesto</span><span class="pop-val" style="color:var(--green)">${presupuesto}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Inicio</span><span class="pop-val">${p.fecha_inicio||"—"}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Fin programado</span><span class="pop-val" style="color:${diasColor}">${p.fecha_fin||"—"}</span></div>
+    <div class="pop-row" style="border-bottom:none"><span class="pop-lbl">Plazo</span><span class="pop-val" style="color:${diasColor}">${diasTxt}</span></div>
+
+    ${p.descripcion?`<div class="pop-section">📝 Descripción</div><div class="pop-desc">${p.descripcion}</div>`:''}
+
+    ${(p.riesgos&&p.riesgos.length)?`
+    <div class="pop-section">⚠️ Riesgos identificados</div>
+    <div class="pop-riesgos">${riesgos}</div>`:''}
+
+    <a class="pop-acc-btn" href="${p.acc_url||'https://acc.autodesk.com'}" target="_blank">
+      🔗 Abrir en Autodesk Construction Cloud
+    </a>
+    <button class="pop-route-btn" onclick="calcRoute(${p.lat},${p.lng},'${p.nombre.replace(/'/g,"\\'")}')">
+      🧭 Calcular ruta a este proyecto
+    </button>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════
+let allProj=[], markers=[], routeControl=null, riskLayerOn=false, selId=null;
+const activeEstados = new Set();
+const activeTipos   = new Set();
+
+// ══════════════════════════════════════════════════════════════
+//  RENDER MARCADORES
+// ══════════════════════════════════════════════════════════════
+function renderMarkers(projs){
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  projs.forEach(p=>{
+    const m = L.marker([p.lat,p.lng],{icon:makeIcon(p)})
+      .bindPopup(makePopup(p),{maxWidth:320})
+      .addTo(map);
+    m._projId = p.id;
+    m.on('click',()=>{ selId=p.id; highlightCard(p.id); });
+    markers.push(m);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RENDER TARJETAS
+// ══════════════════════════════════════════════════════════════
+function renderCards(projs){
+  const container = document.getElementById('list');
+  container.innerHTML='';
+  if(!projs.length){
+    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Sin proyectos que coincidan</div>';
+    return;
+  }
+  projs.forEach(p=>{
+    const ec=getEC(p.estado);
+    const tc=getTColor(p.tipo);
+    const d=document.createElement('div');
+    d.className='pcard';
+    d.dataset.id=p.id;
+    d.style.setProperty('--c',ec.c);
+    const riesgos=(p.riesgos||[]).slice(0,2).map(r=>`<span class="risk-tag">${r}</span>`).join('');
+    const dias = p.fecha_fin ? Math.ceil((new Date(p.fecha_fin)-new Date())/(1000*60*60*24)) : null;
+    const alerta = dias!==null&&dias<30 ? `<span style="font-size:10px;color:var(--red)">⚠ ${dias}d</span>` : '';
+    d.innerHTML=`
+      <div class="pc-row1">
+        <span class="pc-id">${p.id}</span>
+        <span class="pc-badge" style="color:${ec.c};background:${ec.c}18;border-color:${ec.c}44">${p.estado}</span>
+      </div>
+      <div class="pc-name">${p.nombre}</div>
+      <div class="pc-meta">
+        <span class="pc-tipo" style="color:${tc}">${p.tipo}</span>
+        <span class="pc-mun">📍 ${p.municipio||""}</span>
+        ${alerta}
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" style="width:${p.avance}%;background:linear-gradient(90deg,${ec.b},${ec.c})"></div></div>
+        <span class="progress-pct">${p.avance}%</span>
+      </div>
+      <div class="pc-footer">
+        <span class="pc-resp">👤 ${p.responsable||"—"}</span>
+        <div class="pc-riesgos">${riesgos}</div>
+      </div>`;
+    d.addEventListener('click',()=>{
+      selId=p.id;
+      highlightCard(p.id);
+      const m=markers.find(mk=>mk._projId===p.id);
+      if(m){ map.flyTo([p.lat,p.lng],14,{duration:1}); setTimeout(()=>m.openPopup(),800); }
+    });
+    container.appendChild(d);
+  });
+}
+
+function highlightCard(id){
+  document.querySelectorAll('.pcard').forEach(c=>c.classList.toggle('sel',c.dataset.id===id));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  KPIs
+// ══════════════════════════════════════════════════════════════
+function updateKPIs(projs){
+  document.getElementById('k-total').textContent=projs.length;
+  document.getElementById('k-ejec').textContent=projs.filter(p=>p.estado==="En ejecución").length;
+  const avg=projs.length?Math.round(projs.reduce((s,p)=>s+p.avance,0)/projs.length):0;
+  document.getElementById('k-avg').textContent=avg+'%';
+  document.getElementById('k-risk').textContent=projs.filter(p=>p.riesgos&&p.riesgos.length>0).length;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FILTROS
+// ══════════════════════════════════════════════════════════════
+function buildFilters(){
+  const estados=[...new Set(allProj.map(p=>p.estado))];
+  const tipos=[...new Set(allProj.map(p=>p.tipo))];
+  estados.forEach(e=>{
+    activeEstados.add(e);
+    const ec=getEC(e);
+    const btn=document.createElement('button');
+    btn.className='chip on'; btn.textContent=e; btn.dataset.val=e;
+    btn.style.cssText=`color:${ec.c};border-color:${ec.c}55;`;
+    btn.onclick=()=>{
+      if(activeEstados.has(e)){activeEstados.delete(e);btn.classList.remove('on');btn.style.color='';btn.style.borderColor='';}
+      else{activeEstados.add(e);btn.classList.add('on');btn.style.color=ec.c;btn.style.borderColor=ec.c+'55';}
+      applyFilters();
+    };
+    document.getElementById('f-estado').appendChild(btn);
+  });
+  tipos.forEach(t=>{
+    activeTipos.add(t);
+    const tc=getTColor(t);
+    const btn=document.createElement('button');
+    btn.className='chip on'; btn.textContent=t; btn.dataset.val=t;
+    btn.style.cssText=`color:${tc};border-color:${tc}55;`;
+    btn.onclick=()=>{
+      if(activeTipos.has(t)){activeTipos.delete(t);btn.classList.remove('on');btn.style.color='';btn.style.borderColor='';}
+      else{activeTipos.add(t);btn.classList.add('on');btn.style.color=tc;btn.style.borderColor=tc+'55';}
+      applyFilters();
+    };
+    document.getElementById('f-tipo').appendChild(btn);
+  });
+}
+
+function applyFilters(){
+  const q=document.getElementById('search').value.toLowerCase().trim();
+  const filtered=allProj.filter(p=>{
+    if(!activeEstados.has(p.estado)) return false;
+    if(!activeTipos.has(p.tipo)) return false;
+    if(q){
+      const hay=[p.nombre,p.id,p.municipio,p.contratista,p.responsable,p.tipo,p.estado]
+        .filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderMarkers(filtered);
+  renderCards(filtered);
+  updateKPIs(filtered);
+  buildRouteList(filtered);
+}
+document.getElementById('search').addEventListener('input',applyFilters);
+
+// ══════════════════════════════════════════════════════════════
+//  RUTAS
+// ══════════════════════════════════════════════════════════════
+function toggleRoutePanel(){
+  const p=document.getElementById('route-panel');
+  p.classList.toggle('open');
+  document.getElementById('btn-route').classList.toggle('on');
+}
+
+function buildRouteList(projs){
+  const c=document.getElementById('route-list');
+  c.innerHTML='';
+  projs.forEach(p=>{
+    const ec=getEC(p.estado);
+    const item=document.createElement('div');
+    item.className='route-item';
+    item.innerHTML=`<div class="route-dot" style="background:${ec.c}"></div><span>${p.nombre}</span>`;
+    item.onclick=()=>calcRoute(p.lat,p.lng,p.nombre);
+    c.appendChild(item);
+  });
+}
+
+function calcRoute(lat,lng,nombre){
+  const originInput=document.getElementById('route-origin').value.trim();
+  let originLat=13.9946, originLng=-89.0090; // default San Salvador
+
+  if(originInput){
+    const parts=originInput.split(',').map(s=>parseFloat(s.trim()));
+    if(parts.length===2&&!isNaN(parts[0])&&!isNaN(parts[1])){
+      originLat=parts[0]; originLng=parts[1];
+    }
+  } else if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      doRoute(pos.coords.latitude,pos.coords.longitude,lat,lng);
+    },()=>doRoute(originLat,originLng,lat,lng));
+    return;
+  }
+  doRoute(originLat,originLng,lat,lng);
+}
+
+function doRoute(olat,olng,dlat,dlng){
+  if(routeControl) map.removeControl(routeControl);
+  routeControl=L.Routing.control({
+    waypoints:[L.latLng(olat,olng),L.latLng(dlat,dlng)],
+    routeWhileDragging:false,
+    addWaypoints:false,
+    show:false,
+    lineOptions:{styles:[{color:'#00d4ff',weight:4,opacity:.8}]},
+    createMarker:()=>null,
+  }).addTo(map);
+  document.getElementById('route-panel').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CAPA DE RIESGOS (círculos de zona)
+// ══════════════════════════════════════════════════════════════
+let riskCircles=[];
+function toggleRisks(){
+  riskLayerOn=!riskLayerOn;
+  document.getElementById('btn-risks').classList.toggle('on',riskLayerOn);
+  if(riskLayerOn){
+    const RISK_COLORS={'Inundación':'#00bcd4','Deslizamiento':'#ff9800','Sísmica':'#ff5722','Sequía':'#ffc107','default':'#9e9e9e'};
+    allProj.filter(p=>p.zona_riesgo).forEach(p=>{
+      const color=RISK_COLORS[p.zona_riesgo]||RISK_COLORS.default;
+      const c=L.circle([p.lat,p.lng],{radius:1500,color:color,fillColor:color,fillOpacity:.12,weight:1.5,dashArray:'6,4'})
+        .bindTooltip(`⚠ Zona de ${p.zona_riesgo}<br>${p.nombre}`,{sticky:true})
+        .addTo(map);
+      riskCircles.push(c);
+    });
+  } else {
+    riskCircles.forEach(c=>map.removeLayer(c));
+    riskCircles=[];
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLUSTER TOGGLE
+// ══════════════════════════════════════════════════════════════
+let clustered=false;
+function toggleCluster(){
+  clustered=!clustered;
+  document.getElementById('btn-cluster').classList.toggle('on',clustered);
+  applyFilters(); // re-render with same data
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CARGAR PROYECTOS
+// ══════════════════════════════════════════════════════════════
+fetch('proyectos.json')
+  .then(r=>r.json())
+  .then(data=>{
+    allProj=data;
+    buildFilters();
+    renderMarkers(allProj);
+    renderCards(allProj);
+    updateKPIs(allProj);
+    buildRouteList(allProj);
+    if(markers.length){
+      const group=L.featureGroup(markers);
+      map.fitBounds(group.getBounds(),{padding:[40,40]});
+    } else {
+      map.setView([13.9946,-89.009],8);
+    }
+  })
+  .catch(()=>{
+    map.setView([13.9946,-89.009],8);
+    document.getElementById('list').innerHTML='<div style="padding:20px;color:var(--red);font-size:12px;">Error cargando proyectos.json</div>';
+  });
+</script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+</body>
+</html>
